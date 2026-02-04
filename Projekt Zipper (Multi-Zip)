@@ -1,0 +1,35 @@
+@echo off
+setlocal enabledelayedexpansion
+
+title Projekt Zipper (Multi-Zip)
+color 0A
+
+echo ============================================
+echo   PROJEKT ZIPPER
+echo   (ZIPPT DAS GESAMTE PROJEKT)
+echo ============================================
+echo.
+
+REM Projektname = Ordnername
+for %%I in (.) do set PROJECTNAME=%%~nxI
+
+set ZIPFILE=%PROJECTNAME%.zip
+
+echo Erstelle ZIP: %ZIPFILE%
+echo.
+
+REM Falls alte ZIP existiert -> löschen
+if exist "%ZIPFILE%" del "%ZIPFILE%"
+
+REM PowerShell ZIP
+powershell -command ^
+  "Compress-Archive -Path * -DestinationPath '%ZIPFILE%' -Force"
+
+echo.
+echo ============================================
+echo   FERTIG! ZIP erstellt:
+echo   %ZIPFILE%
+echo ============================================
+echo.
+pause
+exit /b
