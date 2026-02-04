@@ -1,0 +1,128 @@
+@echo off
+setlocal enabledelayedexpansion
+
+title Auto Build + Release + Source ZIP
+color 0A
+
+echo ============================================
+echo   AUTO BUILD → RELEASE ORDNER → ZIPS
+echo ============================================
+echo.
+
+REM Projektname = Ordnername
+for %%I in (.) do set PROJECTNAME=%%~nxI
+
+set RELEASE_DIR=release
+set ZIP_RELEASE=%PROJECTNAME%_Release.zip
+set ZIP_SOURCE=%PROJECTNAME%_Source.zip
+
+echo Pruefe Python...
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo Python nicht gefunden.
+    pause
+    exit /b
+)
+
+echo Installiere PyInstaller (falls noetig)...
+pip install pyinstaller >nul
+
+REM Icon suchen
+set ICONFILE=
+for %%i in (*.ico) do (
+    if not defined ICONFILE set ICONFILE=%%i
+)
+
+if defined ICONFILE (
+    echo Icon gefunden: %ICONFILE%
+) else (
+    echo Kein Icon gefunden. EXE wird ohne Icon gebaut.
+)
+
+REM Haupt-PY suchen
+set MAINPY=
+for %%f in (*.py) do (
+    if not defined MAINPY set MAINPY=%%f
+)
+
+if not defined MAINPY (
+    echo Keine .py Datei gefunden.
+    pause
+    exit /b
+)
+
+echo Baue EXE fuer: %MAINPY%
+echo.
+
+REM Alte dist/build entfernen
+if exist dist rmdir /s /q dist
+if exist build rmdir /s /q build
+
+REM EXE bauen
+if defined ICONFILE (
+    pyinstaller --onefile --console --icon="%ICONFILE%" "%MAINPY%"
+) else (
+    pyinstaller --onefile --console "%MAINPY%"
+)
+
+REM Release-Ordner neu erstellen
+if exist "%RELEASE_DIR%" rmdir /s /q "%RELEASE_DIR%"
+mkdir "%RELEASE_DIR%"
+
+REM EXE kopieren
+set EXEFILE=
+for %%x in (dist\*.exe) do (
+    if not defined EXEFILE set EXEFILE=%%x
+)
+
+if defined EXEFILE (
+    echo EXE gefunden: %EXEFILE%
+    copy "%EXEFILE%" "%RELEASE_DIR%" >nul
+) else (
+    echo WARNUNG: Keine EXE gefunden!
+)
+
+REM ICON kopieren
+if defined ICONFILE (
+    copy "%ICONFILE%" "%RELEASE_DIR%" >nul
+)
+
+echo Kopiere wichtige Dateien in Release-Ordner...
+echo.
+
+REM Alle Dateien außer .py, .bat, .zip, .spec kopieren
+for %%f in (*) do (
+    if /I not "%%~xf"==".py" if /I not "%%~xf"==".bat" if /I not "%%~xf"==".zip" if /I not "%%~xf"==".spec" (
+        copy "%%f" "%RELEASE_DIR%" >nul
+    )
+)
+
+echo.
+echo Packe SOURCE ZIP...
+echo.
+
+if exist "%ZIP_SOURCE%" del "%ZIP_SOURCE%"
+
+powershell -command ^
+  "$items = Get-ChildItem -Recurse | Where-Object { $_.Name -notlike '*.zip' -and $_.Name -notlike 'release' -and $_.Name -notlike 'dist' -and $_.Name -notlike 'build' };" ^
+  "Compress-Archive -Path $items -DestinationPath '%ZIP_SOURCE%' -Force"
+
+echo.
+echo Packe RELEASE ZIP...
+echo.
+
+if exist "%ZIP_RELEASE%" del "%ZIP_RELEASE%"
+
+powershell -command ^
+  "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath '%ZIP_RELEASE%' -Force"
+
+echo.
+echo ============================================
+echo   FERTIG!
+echo   Release Ordner: %RELEASE_DIR%
+echo   Release ZIP:    %ZIP_RELEASE%
+echo   Source ZIP:     %ZIP_SOURCE%
+echo ============================================
+echo.
+pause
+exit /b
