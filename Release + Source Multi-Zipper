@@ -1,0 +1,92 @@
+@echo off
+setlocal enabledelayedexpansion
+
+title Release + Source Multi-Zipper (mit Release-Ordner)
+color 0A
+
+echo ============================================
+echo   RELEASE + SOURCE ZIPPER
+echo   (MIT AUTOMATISCHEM RELEASE-ORDNER)
+echo ============================================
+echo.
+
+REM Projektname = Ordnername
+for %%I in (.) do set PROJECTNAME=%%~nxI
+
+set RELEASE_DIR=release
+set ZIP_RELEASE=%PROJECTNAME%_Release.zip
+set ZIP_SOURCE=%PROJECTNAME%_Source.zip
+
+echo Erstelle Release-Ordner: %RELEASE_DIR%
+echo.
+
+REM Release-Ordner neu erstellen
+if exist "%RELEASE_DIR%" rmdir /s /q "%RELEASE_DIR%"
+mkdir "%RELEASE_DIR%"
+
+REM EXE suchen
+set EXEFILE=
+for %%x in (*.exe) do (
+    if not defined EXEFILE set EXEFILE=%%x
+)
+
+if defined EXEFILE (
+    echo EXE gefunden: %EXEFILE%
+    copy "%EXEFILE%" "%RELEASE_DIR%" >nul
+) else (
+    echo WARNUNG: Keine EXE gefunden! Release wird ohne EXE erstellt.
+)
+
+REM ICON suchen
+set ICONFILE=
+for %%i in (*.ico) do (
+    if not defined ICONFILE set ICONFILE=%%i
+)
+
+if defined ICONFILE (
+    echo ICON gefunden: %ICONFILE%
+    copy "%ICONFILE%" "%RELEASE_DIR%" >nul
+) else (
+    echo Kein Icon gefunden.
+)
+
+echo.
+echo Kopiere wichtige Dateien in Release-Ordner...
+echo.
+
+REM Alles außer .py, .zip, .bat, .exe, .ico ignorieren
+for %%f in (*) do (
+    if /I not "%%~xf"==".py" if /I not "%%~xf"==".zip" if /I not "%%~xf"==".bat" if /I not "%%~xf"==".exe" if /I not "%%~xf"==".ico" (
+        copy "%%f" "%RELEASE_DIR%" >nul
+    )
+)
+
+echo.
+echo Packe SOURCE ZIP...
+echo.
+
+if exist "%ZIP_SOURCE%" del "%ZIP_SOURCE%"
+
+powershell -command ^
+  "$items = Get-ChildItem -Recurse | Where-Object { $_.Name -notlike '*.zip' -and $_.Name -notlike 'release' };" ^
+  "Compress-Archive -Path $items -DestinationPath '%ZIP_SOURCE%' -Force"
+
+echo.
+echo Packe RELEASE ZIP...
+echo.
+
+if exist "%ZIP_RELEASE%" del "%ZIP_RELEASE%"
+
+powershell -command ^
+  "Compress-Archive -Path '%RELEASE_DIR%\*' -DestinationPath '%ZIP_RELEASE%' -Force"
+
+echo.
+echo ============================================
+echo   FERTIG!
+echo   Release ZIP: %ZIP_RELEASE%
+echo   Source ZIP:  %ZIP_SOURCE%
+echo   Release Ordner: %RELEASE_DIR%
+echo ============================================
+echo.
+pause
+exit /b
