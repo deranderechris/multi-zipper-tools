@@ -1,0 +1,64 @@
+@echo off
+setlocal enabledelayedexpansion
+
+title Release Paket Zipper
+color 0A
+
+echo ============================================
+echo   RELEASE PAKET ZIPPER
+echo   (PROJEKT + EXE + ICON → ZIP)
+echo ============================================
+echo.
+
+REM Projektname = Ordnername
+for %%I in (.) do set PROJECTNAME=%%~nxI
+
+set ZIPFILE=%PROJECTNAME%_Release.zip
+
+echo Erstelle Release ZIP: %ZIPFILE%
+echo.
+
+REM Alte ZIP löschen
+if exist "%ZIPFILE%" del "%ZIPFILE%"
+
+REM Prüfen ob EXE existiert
+set EXEFILE=
+for %%x in (*.exe) do (
+    if not defined EXEFILE set EXEFILE=%%x
+)
+
+if defined EXEFILE (
+    echo EXE gefunden: %EXEFILE%
+) else (
+    echo WARNUNG: Keine EXE gefunden!
+    echo Release wird ohne EXE erstellt.
+)
+
+REM Prüfen ob ICON existiert
+set ICONFILE=
+for %%i in (*.ico) do (
+    if not defined ICONFILE set ICONFILE=%%i
+)
+
+if defined ICONFILE (
+    echo ICON gefunden: %ICONFILE%
+) else (
+    echo Kein Icon gefunden.
+)
+
+echo.
+echo Packe Projekt, EXE und Icon in ZIP...
+echo.
+
+powershell -command ^
+  "$items = Get-ChildItem -Recurse | Where-Object { $_.Name -ne '%ZIPFILE%' };" ^
+  "Compress-Archive -Path $items -DestinationPath '%ZIPFILE%' -Force"
+
+echo.
+echo ============================================
+echo   FERTIG! RELEASE ZIP erstellt:
+echo   %ZIPFILE%
+echo ============================================
+echo.
+pause
+exit /b
